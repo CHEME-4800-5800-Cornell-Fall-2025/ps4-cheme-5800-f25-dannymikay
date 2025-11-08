@@ -11,10 +11,10 @@ function _objective_function(w::Array{Float64,1}, ḡ::Array{Float64,1},
 
 
     # TODO: This version of the objective function includes the barrier term, and the penalty terms -
-    f = w'*(Σ̂*w) + (1/(2*ρ))*((sum(w) - 1.0)^2 + (transpose(ḡ)*w - R)^2) - (1/μ)*sum(_safe_log.(w));
+    #f = w'*(Σ̂*w) + (1/(2*ρ))*((sum(w) - 1.0)^2 + (transpose(ḡ)*w - R)^2) - (1/μ)*sum(_safe_log.(w));
 
     # TODO: This version of the objective function does NOT have the barrier term
-    # f = w'*(Σ̂*w) + (1/(2*ρ))*((sum(w) - 1.0)^2 + (transpose(ḡ)*w - R)^2);
+     f = w'*(Σ̂*w) + (1/(2*ρ))*((sum(w) - 1.0)^2 + (transpose(ḡ)*w - R)^2);
 
 
     return f;
@@ -74,7 +74,26 @@ function solve(model::MySimulatedAnnealingMinimumVariancePortfolioAllocationProb
         accepted_counter = 0; 
         
         # TODO: Implement simulated annealing logic here -
-        throw(ErrorException("Oooops! Simulated annealing logic not yet implemented!!"));
+        for iter in 1:KL
+            # Propose new candidate
+            w_new = current_w + β * randn(length(current_w))
+            w_new = max.(w_new, 1e-8) # enforce non-negativity
+
+            # Evaluate objective
+            f_new = _objective_function(w_new, ḡ, Σ̂, R, μ, ρ)
+
+            # Acceptance criterion
+            Δf = f_new - current_f
+            if Δf < 0 || rand() < exp(-Δf / T)
+                current_w = w_new
+                current_f = f_new
+                accepted_counter += 1
+                if f_new < f_best
+                    w_best = w_new
+                    f_best = f_new
+                end
+            end
+        end
 
         # update KL -
         fraction_accepted = accepted_counter/KL; # what is the fraction of accepted moves
